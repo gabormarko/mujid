@@ -1,0 +1,29 @@
+services:
+  mujid:
+    build:
+      context: .
+    container_name: mujid_container
+
+    # === Tune this to your application ===
+    network_mode: "host"
+    ipc: "host"
+    pid: "host"
+    privileged: true
+    # ===
+
+    command: /bin/zsh
+    tty: true
+    stdin_open: true
+
+    volumes:
+      - $HOME/.Xauthority:/root/.Xauthority 
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw 
+
+    environment:
+      QT_X11_NO_MITSHM: 1
+      DISPLAY: $DISPLAY
+      SHELL: /bin/zsh
+
+    cap_add:
+      - SYS_NICE
+

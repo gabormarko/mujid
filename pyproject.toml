@@ -5,6 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "loop-rate-limiters>=1.1.0",
     "mujoco>=3.3.0",
-    "pin>=3.4.0",
+    "numpy<2",
+    "rich>=13.9.4",
 ]
