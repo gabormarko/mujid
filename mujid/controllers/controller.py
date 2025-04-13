@@ -12,10 +12,11 @@ The module implements common functionality such as:
 - Standard controller interface definitions
 """
 
-from dataclasses import dataclass
-import pinocchio as pin
-import numpy as np
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+import numpy as np
+import pinocchio as pin
 
 
 @dataclass()
@@ -37,17 +38,15 @@ class ControllerConfig:
     end_effector_frame: str = "fr3_hand_tcp"
     target_pose: pin.SE3 = None
 
-    q0 = np.array(
-        [
-            0.0,
-            -np.pi / 4,
-            0.0,
-            -3 * np.pi / 4,
-            0.0,
-            np.pi / 2,
-            np.pi / 4,
-        ]
-    )
+    q0 = np.array([
+        0.0,
+        -np.pi / 4,
+        0.0,
+        -3 * np.pi / 4,
+        0.0,
+        np.pi / 2,
+        np.pi / 4,
+    ])
 
     @property
     def ctrl_dt(self) -> float:

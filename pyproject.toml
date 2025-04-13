@@ -7,6 +7,18 @@ requires-python = ">=3.10"
 dependencies = [
     "loop-rate-limiters>=1.1.0",
     "mujoco>=3.3.0",
-    "numpy<2",
     "rich>=13.9.4",
 ]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+mujid = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+tsid = ">=1.8.0,<2"
+pinocchio = ">=3.4.0,<4"

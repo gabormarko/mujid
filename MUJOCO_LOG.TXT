@@ -1,6 +1,0 @@
-Tue Mar  4 09:45:27 2025
-ERROR: could not create window
-
-Tue Mar  4 09:45:45 2025
-ERROR: could not create window
-

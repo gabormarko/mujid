@@ -11,12 +11,14 @@ where:
     - Kp, Kd are gain matrices
 """
 
-from typing_extensions import override
-import tsid
+from dataclasses import dataclass
+
 import numpy as np
 import pinocchio as pin
-from dataclasses import dataclass
-from controllers.controller import Controller, ControllerConfig
+import tsid
+from typing_extensions import override
+
+from mujid.controllers.controller import Controller, ControllerConfig
 
 
 @dataclass

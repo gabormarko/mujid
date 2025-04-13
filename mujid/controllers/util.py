@@ -7,13 +7,19 @@ This module provides utilities for:
 
 import logging
 import time
-from rich.logging import RichHandler
+
 import numpy as np
-from controllers.cartesian_impedance_controller import CartesianImpedanceConfig, CartesianImpedanceController  # noqa: F401
-from controllers.controller import Controller, ControllerConfig
-from controllers.gravity_compensation import GravityCompensationController  # noqa: F401
-from controllers.tsid_controller import TSIDController, TSIDJointConfig, TSIDConfig  # noqa: F401
-from controllers.inverse_dynamics_controller import InverseDynamicsController, InverseDynamicsConfig  # noqa: F401
+from rich.logging import RichHandler
+
+from mujid.controllers.cartesian_impedance_controller import (  # noqa: F401
+    CartesianImpedanceConfig,
+    CartesianImpedanceController,
+)
+from mujid.controllers.controller import Controller, ControllerConfig
+from mujid.controllers.gravity_compensation import GravityCompensationController  # noqa: F401
+from mujid.controllers.inverse_dynamics_controller import InverseDynamicsConfig, InverseDynamicsController  # noqa: F401
+from mujid.controllers.operational_space_controller import OperationalSpaceController, OperationalSpaceControllerConfig
+from mujid.controllers.tsid_controller import TSIDConfig, TSIDController, TSIDJointConfig  # noqa: F401
 
 
 def make_controller(ctrl_type: str, path_urdf: str, sim_dt: float) -> tuple[Controller, ControllerConfig]:
@@ -57,6 +63,9 @@ def make_controller(ctrl_type: str, path_urdf: str, sim_dt: float) -> tuple[Cont
     elif ctrl_type == "inverse_dynamics":
         conf = InverseDynamicsConfig()
         ctrl = InverseDynamicsController(conf=conf, path_to_urdf=path_urdf)
+    elif ctrl_type == "operational_space":
+        conf = OperationalSpaceControllerConfig()
+        ctrl = OperationalSpaceController(conf=conf, path_to_urdf=path_urdf)
 
     return ctrl, conf
 

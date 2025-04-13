@@ -16,10 +16,11 @@ where:
     - g(q) is the gravity compensation term
 """
 
-from typing_extensions import override
-from controllers.controller import Controller, ControllerConfig
 import numpy as np
 import pinocchio as pin
+from typing_extensions import override
+
+from mujid.controllers.controller import Controller, ControllerConfig
 
 
 class CartesianImpedanceConfig(ControllerConfig):

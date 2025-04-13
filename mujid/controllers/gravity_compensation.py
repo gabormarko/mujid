@@ -12,10 +12,11 @@ The controller uses Pinocchio's dynamics computations to obtain accurate
 gravity compensation torques based on the robot's current configuration.
 """
 
-from typing_extensions import override
-from controllers.controller import Controller
-import pinocchio as pin
 import numpy as np
+import pinocchio as pin
+from typing_extensions import override
+
+from mujid.controllers.controller import Controller
 
 
 class GravityCompensationController(Controller):

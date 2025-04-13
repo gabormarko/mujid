@@ -20,7 +20,7 @@ import pinocchio as pin
 import tsid
 from typing_extensions import override
 
-from controllers.controller import Controller, ControllerConfig
+from mujid.controllers.controller import Controller, ControllerConfig
 
 
 @dataclass
