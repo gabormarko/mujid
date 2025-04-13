@@ -67,6 +67,9 @@ def make_controller(ctrl_type: str, path_urdf: str, sim_dt: float) -> tuple[Cont
         conf = OperationalSpaceControllerConfig()
         ctrl = OperationalSpaceController(conf=conf, path_to_urdf=path_urdf)
 
+    else:
+        raise ValueError(f"Unknown controller type: {ctrl_type}")
+
     return ctrl, conf
 
 
