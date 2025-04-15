@@ -42,10 +42,10 @@ class CartesianImpedanceConfig(ControllerConfig):
             If None, uniform weights are used.
     """
 
-    kp_primary: float = 200.0
+    kp_primary: float = 2000.0
     kd_primary: float = None
 
-    kp_secondary: float = 0.1
+    kp_secondary: float = 1.0
     kd_secondary: float = None
 
     nv = 7

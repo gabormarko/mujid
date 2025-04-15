@@ -1,4 +1,5 @@
-import threading
+import multiprocessing as mp
+from multiprocessing import shared_memory
 import time
 from pathlib import Path
 
@@ -18,68 +19,172 @@ logger = make_throttled_logger("main", interval=5)
 path_mjf = Path(__file__).parent / "mujid" / "mjcf" / "scene.xml"
 path_urdf = Path(__file__).parent / "mujid" / "urdf" / "fr3_franka_hand.urdf"
 
-ctrl_type = "operational_space"  # "tsid", "cartesian_impedance", "gravity_compensation", "inverse_dynamics"
+ctrl_type = "cartesian_impedance"  # "tsid", "cartesian_impedance", "gravity_compensation", "inverse_dynamics"
 
-multi_threading = False
-sim_dt = 0.002
+sim_dt = 1.0 / 5000.0
 max_time = 1000  # [s]
 
-spec = mujoco.MjSpec.from_file(str(path_mjf))
-spec.option.timestep = sim_dt
-model = spec.compile()
-data = mujoco.MjData(model)
-
-# First reset to initialize everything
-keyframe_id = 1
-mujoco.mj_resetDataKeyframe(model, data, keyframe_id)
+# Create shared memory for state and control exchange
+STATE_SIZE = 14  # 7 for qpos + 7 for qvel
+CONTROL_SIZE = 7  # Number of actuators
+MOCAP_SIZE = 7  # 3 for pos + 4 for quat
+FLOAT_SIZE = 8  # Size of float64 in bytes
 
 
-ctrl, conf = make_controller(ctrl_type, str(path_urdf), sim_dt)
-rate = RateLimiter(frequency=1.0 / sim_dt, warn=False)
+def init_shared_memory():
+    # Create shared memory blocks
+    state_shm = shared_memory.SharedMemory(create=True, size=STATE_SIZE * FLOAT_SIZE)
+    control_shm = shared_memory.SharedMemory(create=True, size=CONTROL_SIZE * FLOAT_SIZE)
+    mocap_shm = shared_memory.SharedMemory(create=True, size=MOCAP_SIZE * FLOAT_SIZE)
+    time_shm = shared_memory.SharedMemory(create=True, size=FLOAT_SIZE)
+
+    # Initialize numpy arrays from shared memory
+    state = np.ndarray((STATE_SIZE,), dtype=np.float64, buffer=state_shm.buf)
+    control = np.ndarray((CONTROL_SIZE,), dtype=np.float64, buffer=control_shm.buf)
+    mocap = np.ndarray((MOCAP_SIZE,), dtype=np.float64, buffer=mocap_shm.buf)
+    sim_time = np.ndarray((1,), dtype=np.float64, buffer=time_shm.buf)
+
+    return state_shm, control_shm, mocap_shm, time_shm, state, control, mocap, sim_time
+
+
+def cleanup_shared_memory(state_shm, control_shm, mocap_shm, time_shm):
+    state_shm.close()
+    control_shm.close()
+    mocap_shm.close()
+    time_shm.close()
+    state_shm.unlink()
+    control_shm.unlink()
+    mocap_shm.unlink()
+    time_shm.unlink()
+
 
 # logger.info(f"Simulation started with dt - {sim_dt} - and frequency - {1.0 / sim_dt}. Initial qpos: {data.qpos}")
 
 
-def control_step(ctrl: Controller, conf: ControllerConfig, model: mujoco.MjModel, data: mujoco.MjData):
-    # Set the target pose
-    qw, qx, qy, qz = data.mocap_quat[0]
-    target_pose = pin.SE3(pin.Quaternion(x=qx, y=qy, z=qz, w=qw), data.mocap_pos[0])
-    ctrl.set_target(target_pose, target_q=conf.q0, target_dq=np.zeros(model.nv))
+def controller_process(shm_names, path_urdf, ctrl_type, sim_dt):
+    # Reconnect to shared memory
+    state_shm = shared_memory.SharedMemory(name=shm_names["state"])
+    control_shm = shared_memory.SharedMemory(name=shm_names["control"])
+    mocap_shm = shared_memory.SharedMemory(name=shm_names["mocap"])
+    time_shm = shared_memory.SharedMemory(name=shm_names["time"])
 
-    # Compute the controls of the different controllers
-    desired_torques = ctrl.update(data.time, data.qpos, data.qvel)
+    # Create numpy arrays from shared memory
+    state = np.ndarray((STATE_SIZE,), dtype=np.float64, buffer=state_shm.buf)
+    control = np.ndarray((CONTROL_SIZE,), dtype=np.float64, buffer=control_shm.buf)
+    mocap = np.ndarray((MOCAP_SIZE,), dtype=np.float64, buffer=mocap_shm.buf)
+    sim_time = np.ndarray((1,), dtype=np.float64, buffer=time_shm.buf)
 
-    # Set the control values and simulate a step
-    data.ctrl = desired_torques
+    # Initialize controller
+    ctrl, conf = make_controller(ctrl_type, str(path_urdf), sim_dt)
+    rate = RateLimiter(frequency=1000.0, warn=True)
 
+    logger.info("Controller process started")
 
-def controller_loop(viewer, ctrl, conf, model, data):
-    last_ctrl_time = 0
+    while True:
+        # Extract current state
+        qpos = state[:7]
+        qvel = state[7:]
+        current_time = sim_time[0]
 
-    while viewer.is_running():
-        if data.time > last_ctrl_time + conf.ctrl_dt:
-            last_ctrl_time = data.time
-            control_step(ctrl, conf, model, data)
+        # Extract mocap data
+        mocap_pos = mocap[:3]
+        mocap_quat = mocap[3:]
 
-        time.sleep(data.time - last_ctrl_time)
+        # Set the target pose
+        target_pose = pin.SE3(
+            pin.Quaternion(x=mocap_quat[1], y=mocap_quat[2], z=mocap_quat[3], w=mocap_quat[0]), mocap_pos
+        )
+        ctrl.set_target(target_pose, target_q=conf.q0, target_dq=np.zeros(7))
 
+        # Compute control
+        desired_torques = ctrl.update(current_time, qpos, qvel)
 
-with mujoco.viewer.launch_passive(model, data) as viewer:
-    start = time.time()
-
-    if multi_threading:
-        ctrl_thread = threading.Thread(target=controller_loop, args=(viewer, ctrl, conf, model, data), daemon=True)
-        ctrl_thread.start()
-
-    while viewer.is_running() and time.time() - start < max_time:
-        mujoco.mj_step(model, data)
-
-        if not multi_threading:
-            control_step(ctrl, conf, model, data)
-
-        viewer.sync()
-
-        # logger.info(f"Robot state: {data.qpos}, Mocap Pos: {data.mocap_pos[0]}")
-        logger.info(f"Current sim-time : {data.time} - Current time from start: {time.time() - start}")
+        # Update shared control array
+        control[:] = desired_torques
 
         rate.sleep()
+
+
+def simulation_process(shm_names, path_mjf, sim_dt, max_time):
+    # Initialize MuJoCo simulation
+    spec = mujoco.MjSpec.from_file(str(path_mjf))
+    spec.option.timestep = sim_dt
+    model = spec.compile()
+    data = mujoco.MjData(model)
+
+    # Reset to initial state
+    keyframe_id = 1
+    mujoco.mj_resetDataKeyframe(model, data, keyframe_id)
+
+    # Reconnect to shared memory
+    state_shm = shared_memory.SharedMemory(name=shm_names["state"])
+    control_shm = shared_memory.SharedMemory(name=shm_names["control"])
+    mocap_shm = shared_memory.SharedMemory(name=shm_names["mocap"])
+    time_shm = shared_memory.SharedMemory(name=shm_names["time"])
+
+    # Create numpy arrays from shared memory
+    state = np.ndarray((STATE_SIZE,), dtype=np.float64, buffer=state_shm.buf)
+    control = np.ndarray((CONTROL_SIZE,), dtype=np.float64, buffer=control_shm.buf)
+    mocap = np.ndarray((MOCAP_SIZE,), dtype=np.float64, buffer=mocap_shm.buf)
+    sim_time = np.ndarray((1,), dtype=np.float64, buffer=time_shm.buf)
+
+    rate = RateLimiter(frequency=1.0 / sim_dt, warn=False)
+
+    logger.info("Simulation process started")
+
+    with mujoco.viewer.launch_passive(model, data, show_left_ui=False, show_right_ui=False) as viewer:
+        start = time.time()
+
+        while viewer.is_running() and time.time() - start < max_time:
+            # Update simulation with control inputs
+            data.ctrl = control
+
+            # Step simulation
+            mujoco.mj_step(model, data)
+
+            # Update shared state
+            state[:7] = data.qpos
+            state[7:] = data.qvel
+            sim_time[0] = data.time
+
+            # Update shared mocap state
+            mocap[:3] = data.mocap_pos[0]
+            mocap[3:] = data.mocap_quat[0]
+
+            viewer.sync()
+            logger.info(f"Current sim-time : {data.time} - Current time from start: {time.time() - start}")
+            rate.sleep()
+
+
+if __name__ == "__main__":
+    try:
+        # Initialize shared memory
+        state_shm, control_shm, mocap_shm, time_shm, state, control, mocap, sim_time = init_shared_memory()
+
+        # Create dictionary of shared memory names
+        shm_names = {
+            "state": state_shm.name,
+            "control": control_shm.name,
+            "mocap": mocap_shm.name,
+            "time": time_shm.name,
+        }
+
+        # Create processes
+        ctrl_process = mp.Process(target=controller_process, args=(shm_names, path_urdf, ctrl_type, sim_dt))
+
+        sim_process = mp.Process(target=simulation_process, args=(shm_names, path_mjf, sim_dt, max_time))
+
+        # Start processes
+        ctrl_process.start()
+        sim_process.start()
+
+        # Wait for simulation to finish
+        sim_process.join()
+
+        # Terminate controller process
+        ctrl_process.terminate()
+        ctrl_process.join()
+
+    finally:
+        # Cleanup shared memory
+        cleanup_shared_memory(state_shm, control_shm, mocap_shm, time_shm)
