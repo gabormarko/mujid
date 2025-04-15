@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "loop-rate-limiters>=1.1.0",
     "mujoco>=3.3.0",
-    "rich>=13.9.4",
+    "rich>=13.9.4", "mkdocs-material>=9.6.11,<10", "mkdocstrings[python]>=0.29.1,<0.30",
 ]
 
 [tool.pixi.workspace]
