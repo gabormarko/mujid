@@ -2,18 +2,9 @@
 Operational Space Controller implementation for robot control.
 
 This module provides an implementation of an operational space controller that operates
-in task space (Cartesian coordinates) with dynamic consistency:
-- Primary task: Cartesian pose control of the end-effector using operational space formulation
-- Secondary task: Dynamically consistent nullspace control
-- Dynamic compensation: Full robot dynamics compensation
+in task space (Cartesian coordinates) with dynamic consistency.
 
-The controller implements the following control law:
-    τ = J^T Λ(x) f*(x) + N^T(q)[Kp_s(q_d - q) + Kd_s(dq_d - dq)] + h(q,dq)
-where:
-    - Λ(x) = (J M^{-1} J^T)^{-1} is the operational space inertia matrix
-    - f*(x) = Kp * e + Kd * ė is the task space control force
-    - N^T(q) is the dynamically consistent nullspace projector
-    - h(q,dq) = C(q,dq)dq + g(q) is the dynamic compensation term
+It also provides a default configuration class for the controller with some working default values.
 """
 
 import numpy as np
@@ -52,6 +43,8 @@ class OperationalSpaceControllerConfig(ControllerConfig):
 
     weights_primary: np.array(float) = [1.0, 1.0, 1.0, 10.0, 10.0, 10.0]
     weights_secondary: np.array(float) = None
+
+    use_local_jacobian: bool = True
 
     @property
     def Kp_primary(self) -> np.array:
@@ -93,16 +86,43 @@ class OperationalSpaceControllerConfig(ControllerConfig):
 class OperationalSpaceController(Controller):
     """Operational Space Controller for dynamically consistent robot control.
 
-    This controller implements operational space control with:
+    This controller implements a dynamically consistent control structure with:
+
     1. Primary task: Operational space control of the end-effector pose
     2. Secondary task: Dynamically consistent nullspace control
     3. Dynamic compensation (inertia, Coriolis, gravity)
 
-    The control law implements the operational space formulation:
-        τ = J^T Λ(x) f*(x) + N^T(q)[Kp_s(q_d - q) + Kd_s(dq_d - dq)] + h(q,dq)
+    The controller implements the following control law:
 
-    where Λ(x) is the operational space inertia matrix, f*(x) is the task space control force,
-    and h(q,dq) provides direct dynamic compensation in joint space.
+    $$
+    \\tau = \\tau_p + \\tau_{ns} + \\tau_d
+    $$
+
+    $$
+    \\begin{cases}
+    \\tau_p && = J^\\top \\Lambda(x) f^*(x) \\\\
+    \\tau_{ns} && = N^\\top(q)[K_p^s(q_d - q) + K_d^s(\\dot{q}_d - \\dot{q})] \\\\
+    \\tau_d && = h(q,\\dot{q}) \\\\
+    \\end{cases}
+    $$
+
+    where:
+
+    - $\\tau_p$ is the primary task torque
+    - $\\tau_{ns}$ is the dynamically consistent nullspace torque
+    - $\\tau_d$ is the dynamic compensation torque
+
+    The other terms are:
+
+    - $\\Lambda(x) = (J M^{-1} J^\\top)^{-1}$ is the operational space inertia matrix
+    - $f^*(x) = K_p^p e + K_d^p \\dot{e}$ is the task space control force
+    - $N^\\top(q) = I - J^\\top J_b^\\top$ is the dynamically consistent nullspace projector
+    - $J_b = M^{-1} J^\\top \\Lambda$ is the dynamically consistent inverse of $J$
+    - $h(q,\\dot{q}) = C(q,\\dot{q})\\dot{q} + g(q)$ is the dynamic compensation term
+    - $e\\in \\mathbb{R}^6$ is the pose error in the tangent space of $SE3$
+    - $\\dot{e}$ is the velocity error in task space
+    - $q, \\dot{q}$ are joint positions and velocities
+    - $q_d, \\dot{q}_d$ are desired joint positions and velocities for the secondary task
     """
 
     def __init__(
@@ -154,60 +174,56 @@ class OperationalSpaceController(Controller):
     def update(self, t: float, q: np.array, dq: np.array) -> np.array:
         """Compute control torques based on current robot state.
 
-        The controller performs the following steps:
-            1. Update the robot dynamics (M, C, g)
-            2. Compute operational space quantities (Λ)
-            3. Compute the error between target and current end-effector pose
-            4. Compute primary task forces in operational space
-            5. Project to joint space with dynamic consistency
-            6. Add dynamically consistent nullspace control
-            7. Add direct dynamic compensation
+        Implements the operational space control law:
+
+        $$
+        \\tau = \\underbrace{J^\\top \\Lambda(x) f^*(x)}_{\\text{primary task}} +
+                \\underbrace{N^\\top(q)[K_p^s(q_d - q) + K_d^s(\\dot{q}_d - \\dot{q})]}_{\\text{nullspace task}} +
+                \\underbrace{h(q,\\dot{q})}_{\\text{dynamics}}
+        $$
 
         Args:
             t (float): Current time
-            q (np.array): Current joint positions
-            dq (np.array): Current joint velocities
+            q (np.array): Current joint positions ($q$)
+            dq (np.array): Current joint velocities ($\\dot{q}$)
 
         Returns:
-            np.array: Computed joint torques with dynamic consistency
+            np.array: Computed joint torques ($\\tau$) combining primary task, nullspace,
+                     and dynamic compensation terms
         """
-        # Update robot dynamics
         self._update_robot_model(q, dq)
 
-        # Get mass matrix and compute its inverse
-        M_inv = np.linalg.inv(self._data.M)
-
-        # Compute task space quantities
-        J = pin.computeFrameJacobian(self._model, self._data, q, self._end_effector_frame_id, pin.LOCAL)
-
-        # Operational space inertia matrix (Λ)
-        Lambda = np.linalg.pinv(J @ M_inv @ J.T)
-
-        # Dynamically consistent inverse of J
-        J_bar = M_inv @ J.T @ Lambda
-
-        # Compute task space error
+        # Compute end-effector pose error
         end_effector_pose = self._data.oMf[self._end_effector_frame_id]
-        diff_pose = end_effector_pose.actInv(self._target_pose)
+        diff_pose = (
+            end_effector_pose.actInv(self._target_pose)
+            if self.conf.use_local_jacobian
+            else self._target_pose.act(end_effector_pose.inverse())
+        )
+        error = pin.log(diff_pose)  # project to tangent space of SE3
 
-        error = np.zeros(6)
-        error[:3] = diff_pose.translation
-        error[3:] = pin.log3(diff_pose.rotation)
+        # Compute Jacobian and operational space quantities
+        J = pin.computeFrameJacobian(
+            self._model,
+            self._data,
+            q,
+            self._end_effector_frame_id,
+            pin.LOCAL if self.conf.use_local_jacobian else pin.WORLD,
+        )
+        M_inv = np.linalg.inv(self._data.M)
+        Lambda = np.linalg.pinv(J @ M_inv @ J.T)  # operational space inertia matrix
+        J_bar = M_inv @ J.T @ Lambda  # dynamically consistent inverse
 
-        # Compute operational space force
+        # Primary task: operational space control
         f_star = self.conf.Kp_primary @ error - self.conf.Kd_primary @ (J @ dq)
+        tau_primary = J.T @ Lambda @ f_star
 
-        # Primary task torques with dynamic consistency
-        tau_primary = J.T @ Lambda @ (f_star)
-
-        # Dynamic compensation torques
-        tau_dynamic = self._data.nle
-
-        # Dynamically consistent nullspace projector
-        N_bar = np.eye(self._model.nv) - J.T @ J_bar.T
-
-        # Nullspace control (joint space)
-        tau_secondary = self.conf.Kp_secondary @ (self._target_q - q) - self.conf.Kd_secondary @ (dq - self._target_dq)
+        # Secondary task: dynamically consistent nullspace control
+        N_bar = np.eye(self._model.nv) - J.T @ J_bar.T  # dynamically consistent nullspace projector
+        tau_secondary = self.conf.Kp_secondary @ (self._target_q - q) + self.conf.Kd_secondary @ (self._target_dq - dq)
         tau_nullspace = N_bar @ tau_secondary
+
+        # Dynamic compensation (includes Coriolis and gravity)
+        tau_dynamic = self._data.nle
 
         return tau_primary + tau_nullspace + tau_dynamic

@@ -2,18 +2,9 @@
 Cartesian Impedance Controller implementation for robot control.
 
 This module provides an implementation of a Cartesian impedance controller that operates
-in task space (Cartesian coordinates) with a hierarchical structure:
-- Primary task: Cartesian pose control of the end-effector
-- Secondary task: Joint space control in the nullspace
+in task space (Cartesian coordinates).
 
-The controller implements the following control law:
-    τ = J^T(Kp_p * e + Kd_p * ė) + N(Kp_s(q_d - q) + Kd_s(dq_d - dq)) + g(q)
-where:
-    - J is the end-effector Jacobian
-    - N is the nullspace projector
-    - Kp_p, Kd_p are primary task gains
-    - Kp_s, Kd_s are secondary task gains
-    - g(q) is the gravity compensation term
+It also provides with a default configuration class for the controller with some working default values.
 """
 
 import numpy as np
@@ -42,16 +33,18 @@ class CartesianImpedanceConfig(ControllerConfig):
             If None, uniform weights are used.
     """
 
-    kp_primary: float = 2000.0
+    kp_primary: float = 200.0
     kd_primary: float = None
 
-    kp_secondary: float = 1.0
+    kp_secondary: float = 50.0
     kd_secondary: float = None
 
     nv = 7
 
     weights_primary: np.array(float) = None
     weights_secondary: np.array(float) = None
+
+    use_local_jacobian: bool = True
 
     @property
     def Kp_primary(self) -> np.array:
@@ -94,14 +87,42 @@ class CartesianImpedanceController(Controller):
     """Cartesian Impedance Controller for hierarchical robot control.
 
     This controller implements a hierarchical control structure with:
+
     1. Primary task: Cartesian impedance control of the end-effector pose
     2. Secondary task: Joint space control in the nullspace
     3. Gravity compensation
 
-    The control law combines these components:
-        τ = J^T(Kp_p * e + Kd_p * ė) + N(Kp_s(q_d - q) + Kd_s(dq_d - dq)) + g(q)
+    The controller implements the following control law:
 
-    where J is the Jacobian, N is the nullspace projector, and g(q) is gravity compensation.
+    $$
+    \\tau = \\tau_p + \\tau_{ns} + \\tau_g
+    $$
+
+    $$
+    \\begin{cases}
+    \\tau_p && = J^\\top(K_p^p e + K_d^p \\dot{e}) \\\\
+    \\tau_{ns} && = N(K_p^s(q_d - q) + K_d^s(\\dot{q}_d - \\dot{q})) \\\\
+    \\tau_g && = g(q) \\\\
+    \\end{cases}
+    $$
+
+    where:
+
+    - $\\tau_p$ is the primary task torque
+    - $\\tau_{ns}$ is the secondary task torque in the nullspace
+    - $\\tau_g$ is the gravity compensation torque
+
+    The other terms are:
+
+    - $J$ is the end-effector Jacobian
+    - $N$ is the nullspace projector
+    - $K_p^p, K_d^p$ are primary task gains
+    - $K_p^s, K_d^s$ are secondary task gains
+    - $g(q)$ is the gravity compensation term
+    - $e\\in \\mathbb{R}^6$ is the pose error in the tangent space of $SE3$
+    - $\\dot{e}$ is the velocity error in our case since we are not tracking velocities it is simply the negative end-effector twist $-J \\dot{q}$
+    - $q, \\dot{q}$ are joint positions and velocities
+    - $q_d, \\dot{q}_d$ are desired joint positions and velocities for the secondary task
     """
 
     def __init__(
@@ -151,40 +172,31 @@ class CartesianImpedanceController(Controller):
 
     @override
     def update(self, t: float, q: np.array, dq: np.array) -> np.array:
-        """Compute control torques based on current robot state.
-
-        The controller performs the following steps:
-            1. Update the forward kinematics
-            2. Compute the error between target and current end-effector pose
-            3. Compute primary task torques (Cartesian impedance control)
-            4. Compute secondary task torques in the nullspace (joint space control)
-            5. Add gravity compensation
-
-        Args:
-            t (float): Current time
-            q (np.array): Current joint positions
-            dq (np.array): Current joint velocities
-
-        Returns:
-            np.array: Computed joint torques combining primary task, nullspace,
-                     and gravity compensation terms
-        """
-
         self._update_robot_model(q, dq)
 
         end_effector_pose = self._data.oMf[self._end_effector_frame_id]
-        diff_pose = end_effector_pose.actInv(self._target_pose)
+        diff_pose = (
+            end_effector_pose.actInv(self._target_pose)
+            if self.conf.use_local_jacobian
+            else self._target_pose.act(end_effector_pose.inverse())
+        )
 
-        error = np.zeros(6)
-        error[:3] = diff_pose.translation
-        error[3:] = pin.log3(diff_pose.rotation)
+        error = pin.log(diff_pose)  # project to tangent space of SE3
 
-        J = pin.computeFrameJacobian(self._model, self._data, q, self._end_effector_frame_id, pin.LOCAL)
+        J = pin.computeFrameJacobian(
+            self._model,
+            self._data,
+            q,
+            self._end_effector_frame_id,
+            pin.LOCAL if self.conf.use_local_jacobian else pin.WORLD,
+        )
 
         tau_primary = J.T @ (self.conf.Kp_primary @ error - self.conf.Kd_primary @ J @ dq)
 
         nullspace_projector = np.eye(self._model.nv) - np.linalg.pinv(J) @ J
-        tau_secondary = self.conf.Kp_secondary @ (self._target_q - q) - self.conf.Kd_secondary @ (self._target_dq - dq)
+        tau_secondary = self._data.M @ (
+            self.conf.Kp_secondary @ (self._target_q - q) + self.conf.Kd_secondary @ (self._target_dq - dq)
+        )
         tau_nullspace = nullspace_projector @ tau_secondary
 
         tau_gravity = pin.computeGeneralizedGravity(self._model, self._data, q)

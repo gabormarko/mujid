@@ -9,7 +9,6 @@ import numpy as np
 from loop_rate_limiters import RateLimiter
 from pinocchio import pin
 
-from mujid.controllers.controller import Controller, ControllerConfig
 from mujid.controllers.util import make_controller, make_throttled_logger
 
 
@@ -19,10 +18,13 @@ logger = make_throttled_logger("main", interval=5)
 path_mjf = Path(__file__).parent / "mujid" / "mjcf" / "scene.xml"
 path_urdf = Path(__file__).parent / "mujid" / "urdf" / "fr3_franka_hand.urdf"
 
-ctrl_type = "cartesian_impedance"  # "tsid", "cartesian_impedance", "gravity_compensation", "inverse_dynamics"
+ctrl_type = "operational_space"  # "tsid", "cartesian_impedance", "gravity_compensation", "inverse_dynamics"
 
 sim_dt = 1.0 / 5000.0
 max_time = 1000  # [s]
+
+dry_friction = 0.1  # [Nm]
+viscous_friction = 2.0  # [Nm/(rad/s)]
 
 # Create shared memory for state and control exchange
 STATE_SIZE = 14  # 7 for qpos + 7 for qvel
@@ -105,11 +107,18 @@ def controller_process(shm_names, path_urdf, ctrl_type, sim_dt):
         rate.sleep()
 
 
-def simulation_process(shm_names, path_mjf, sim_dt, max_time):
+def simulation_process(shm_names, path_mjf, sim_dt, max_time, viz_update_rate: int = 100):
     # Initialize MuJoCo simulation
     spec = mujoco.MjSpec.from_file(str(path_mjf))
     spec.option.timestep = sim_dt
     model = spec.compile()
+
+    # Set friction values for all robot joints
+    for i in range(7):
+        joint_id = model.joint(f"fr3_joint{i + 1}").id
+        model.dof_damping[joint_id] = viscous_friction  # Viscous friction coefficient
+        model.dof_frictionloss[joint_id] = dry_friction  # Dry/Coulomb friction
+
     data = mujoco.MjData(model)
 
     # Reset to initial state
@@ -132,6 +141,7 @@ def simulation_process(shm_names, path_mjf, sim_dt, max_time):
 
     logger.info("Simulation process started")
 
+    step_counter = 0
     with mujoco.viewer.launch_passive(model, data, show_left_ui=False, show_right_ui=False) as viewer:
         start = time.time()
 
@@ -151,9 +161,13 @@ def simulation_process(shm_names, path_mjf, sim_dt, max_time):
             mocap[:3] = data.mocap_pos[0]
             mocap[3:] = data.mocap_quat[0]
 
-            viewer.sync()
+            if step_counter % viz_update_rate == 0:
+                viewer.sync()
+
             logger.info(f"Current sim-time : {data.time} - Current time from start: {time.time() - start}")
             rate.sleep()
+
+            step_counter += 1
 
 
 if __name__ == "__main__":
