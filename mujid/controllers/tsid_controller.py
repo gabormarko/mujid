@@ -17,7 +17,8 @@ from dataclasses import dataclass
 
 import numpy as np
 import pinocchio as pin
-import tsid
+
+# import tsid
 from typing_extensions import override
 
 from mujid.controllers.controller import Controller, ControllerConfig

@@ -18,7 +18,7 @@ logger = make_throttled_logger("main", interval=5)
 path_mjf = Path(__file__).parent / "mujid" / "mjcf" / "scene.xml"
 path_urdf = Path(__file__).parent / "mujid" / "urdf" / "fr3_franka_hand.urdf"
 
-ctrl_type = "operational_space"  # "tsid", "cartesian_impedance", "gravity_compensation", "inverse_dynamics"
+ctrl_type = "cartesian_impedance"  # "tsid", "cartesian_impedance", "gravity_compensation", "inverse_dynamics"
 
 sim_dt = 1.0 / 5000.0
 max_time = 1000  # [s]
