@@ -160,13 +160,72 @@
                       <site name="attachment_site" pos="0 0 0.107"/>
                       <body name="hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                         <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017"/>
+                        <!-- Final tuned wrist-mounted egocentric camera -->
+                        <site name="wrist_camera_site" pos="0.1 0 0.04" size="0.01" rgba="0 1 0 0.6"/>
+                        <camera name="wrist_egocentric" pos="0.1 0 0.04" quat="0.299 0.641 0.641 0.299" fovy="80"/>
+                        <!-- TCP cube: 16 mm side, fixed to the hand (no collision) -->
+                        <!-- moved slightly forward and out of the palm so it's visible in the viewer -->
+                        <body name="lego_2x2_hollow" pos="0 0 0.115" quat="0 1 0 0">
+                          <geom name="wall_top" 
+                                type="box" 
+                                pos="0 0 0.0088" 
+                                size="0.0079 0.0079 0.0008" 
+                                rgba="0.88235 0.835294 0.9294 1"/>
+                                
+                          <geom name="wall_front" 
+                                type="box" 
+                                pos="0.0073 0 0.004" 
+                                size="0.0006 0.0079 0.004" 
+                                rgba="0.88235 0.835294 0.9294 1"/>
+                                
+                          <geom name="wall_back" 
+                                type="box" 
+                                pos="-0.0073 0 0.004" 
+                                size="0.0006 0.0079 0.004" 
+                                rgba="0.88235 0.835294 0.9294 1"/>
+                                
+                          <geom name="wall_right" 
+                                type="box" 
+                                pos="0 0.0073 0.004" 
+                                size="0.0067 0.0006 0.004" 
+                                rgba="0.88235 0.835294 0.9294 1"/>
+                                
+                          <geom name="wall_left" 
+                                type="box" 
+                                pos="0 -0.0073 0.004" 
+                                size="0.0067 0.0006 0.004" 
+                                rgba="0.88235 0.835294 0.9294 1"/>
+                                
+
+                          <geom name="stud_1" 
+                                type="cylinder" 
+                                pos="0.004 0.004 0.01045" 
+                                size="0.0024 0.00085" 
+                                rgba="0.88235 0.835294 0.9294 1"/>
+                          <geom name="stud_2" 
+                                type="cylinder" 
+                                pos="-0.004 0.004 0.01045" 
+                                size="0.0024 0.00085" 
+                                rgba="0.88235 0.835294 0.9294 1"/>                         
+                          <geom name="stud_3" 
+                                type="cylinder" 
+                                pos="0.004 -0.004 0.01045" 
+                                size="0.0024 0.00085" 
+                                rgba="0.88235 0.835294 0.9294 1"/>                        
+                          <geom name="stud_4" 
+                                type="cylinder" 
+                                pos="-0.004 -0.004 0.01045" 
+                                size="0.0024 0.00085" 
+                                rgba="0.88235 0.835294 0.9294 1"/>
+                                
+                        </body>
                         <geom mesh="hand_0" material="off_white" class="visual"/>
                         <geom mesh="hand_1" material="black" class="visual"/>
                         <geom mesh="hand_2" material="black" class="visual"/>
                         <geom mesh="hand_3" material="white" class="visual"/>
                         <geom mesh="hand_4" material="off_white" class="visual"/>
                         <geom mesh="hand_c" class="collision"/>
-                        <body name="left_finger" pos="0 0 0.0584">
+                        <body name="left_finger" pos="0 0.008 0.0584">
                           <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7"/>
                           <geom mesh="finger_0" material="off_white" class="visual"/>
                           <geom mesh="finger_1" material="black" class="visual"/>
@@ -177,7 +236,7 @@
                           <geom class="fingertip_pad_collision_4"/>
                           <geom class="fingertip_pad_collision_5"/>
                         </body>
-                        <body name="right_finger" pos="0 0 0.0584" quat="0 0 0 1">
+                        <body name="right_finger" pos="0 -0.008 0.0584" quat="0 0 0 1">
                           <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7"/>
                           <geom mesh="finger_0" material="off_white" class="visual"/>
                           <geom mesh="finger_1" material="black" class="visual"/>
@@ -198,7 +257,35 @@
         </body>
       </body>
     </body>
+        <body name="lego_2x2_fixed" pos="0.6 0 0.115" quat="1 0 0 0">
+      <geom name="main_box" 
+            type="box" 
+            pos="0 0 0.0048" 
+            size="0.0079 0.0079 0.0048" 
+            rgba="0.50588 0 0.48235 1"/>
+      <geom name="stud_1_1" 
+            type="cylinder" 
+            pos="0.004 0.004 0.01045" 
+            size="0.0026 0.00085" 
+            rgba="0.50588 0 0.48235 1"/>
+      <geom name="stud_2_1" 
+            type="cylinder" 
+            pos="-0.004 0.004 0.01045" 
+            size="0.0026 0.00085" 
+            rgba="0.50588 0 0.48235 1"/>                     
+      <geom name="stud_3_1" 
+            type="cylinder" 
+            pos="0.004 -0.004 0.01045" 
+            size="0.0026 0.00085" 
+            rgba="0.50588 0 0.48235 1"/>
+      <geom name="stud_4_1" 
+            type="cylinder" 
+            pos="-0.004 -0.004 0.01045" 
+            size="0.0026 0.00085" 
+            rgba="0.50588 0 0.48235 1"/>
+    </body>
   </worldbody>
+
 
   <actuator>
     <!--<position class="fr3" name="fr3_joint1" joint="fr3_joint1" kp="4500" kv="450"/>-->

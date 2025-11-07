@@ -36,17 +36,19 @@ class ControllerConfig:
 
     ctrl_freq: float = 500.0
     end_effector_frame: str = "fr3_hand_tcp"
-    target_pose: pin.SE3 = None
+    target_pose: pin.SE3 | None = None
 
-    q0 = np.array([
-        0.0,
-        -np.pi / 4,
-        0.0,
-        -3 * np.pi / 4,
-        0.0,
-        np.pi / 2,
-        np.pi / 4,
-    ])
+    q0 = np.array(
+        [
+            0.0,
+            -np.pi / 4,
+            0.0,
+            -3 * np.pi / 4,
+            0.0,
+            np.pi / 2,
+            np.pi / 4,
+        ]
+    )
 
     @property
     def ctrl_dt(self) -> float:
@@ -69,7 +71,7 @@ class ControllerConfig:
         return model.getFrameId(self.end_effector_frame)
 
     @staticmethod
-    def Kp(n: int, kp: float, diag_weights: np.array = None) -> np.array:
+    def Kp(n: int, kp: float, diag_weights: np.ndarray | None = None) -> np.ndarray:
         """Compute proportional gain matrix with optional diagonal weighting.
 
         Args:
@@ -90,7 +92,12 @@ class ControllerConfig:
         return kp * np.eye(n)
 
     @staticmethod
-    def Kd(n: int, kp: float, kd: float = None, diag_weights: np.array = None) -> np.array:
+    def Kd(
+        n: int,
+        kp: float,
+        kd: float | None = None,
+        diag_weights: np.ndarray | None = None,
+    ) -> np.ndarray:
         """Compute derivative gain matrix with optional diagonal weighting.
 
         If kd is not provided, it's computed for critical damping as:
@@ -154,7 +161,7 @@ class Controller(ABC):
         self._model = pin.buildModelFromUrdf(path_to_urdf)
         self._data = self._model.createData()
 
-    def _update_robot_model(self, q: np.array, dq: np.array):
+    def _update_robot_model(self, q: np.ndarray, dq: np.ndarray):
         """Update the robot's kinematic and dynamic model.
 
         Computes:
@@ -171,7 +178,7 @@ class Controller(ABC):
         pin.computeAllTerms(self._model, self._data, q, dq)
 
     @abstractmethod
-    def update(self, t: float, q: np.array, dq: np.array) -> np.array:
+    def update(self, t: float, q: np.ndarray, dq: np.ndarray) -> np.ndarray:
         """Compute control commands based on current robot state.
 
         This method should be implemented by concrete controller classes
@@ -190,7 +197,12 @@ class Controller(ABC):
         """
         raise NotImplementedError
 
-    def set_target(self, target_pose: pin.SE3, q: np.array, dq: np.array) -> np.array:
+    def set_target(
+        self,
+        target_pose: pin.SE3 | None = None,
+        target_q: np.ndarray | None = None,
+        target_dq: np.ndarray | None = None,
+    ) -> np.ndarray:
         """Set target state for the controller.
 
         Args:

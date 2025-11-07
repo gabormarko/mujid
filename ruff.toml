@@ -1,1 +1,17 @@
 line-length = 120
+
+# Ignore pydocstyle (docstring) codes so the linter/IDE won't report missing docstrings.
+# D100..D107 cover module, class, method, function, package, magic method, nested class
+# and __init__ docstring missing errors.
+lint.extend-ignore = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "E302",
+    "F841",
+]

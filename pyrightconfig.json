@@ -1,0 +1,7 @@
+{
+    "typeCheckingMode": "basic",
+    "reportMissingTypeStubs": false,
+    "stubPath": "mujid/stubs",
+    "useLibraryCodeForTypes": true,
+    "reportUnusedVariable": "warning"
+}

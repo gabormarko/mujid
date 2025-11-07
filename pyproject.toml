@@ -10,6 +10,7 @@ dependencies = [
     "rich>=13.9.4",
     "mkdocs-material>=9.6.11,<10",
     "mkdocstrings[python]>=0.29.1,<0.30",
+    "matplotlib",
 ]
 
 [tool.pixi.workspace]
@@ -24,3 +25,4 @@ mujid = { path = ".", editable = true }
 [tool.pixi.dependencies]
 tsid = ">=1.8.0,<2"
 pinocchio = ">=3.4.0,<4"
+pybind11-stubgen = "*"
