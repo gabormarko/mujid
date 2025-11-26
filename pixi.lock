@@ -126,15 +126,18 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/38/fc/bce832fd4fd99766c04d1ee0eead6b0ec6486fb100ae5e74c1d91292b982/certifi-2025.1.31-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/52/ed/b7f4f07de100bdb95c1756d3a4d17b90c1a3c53715c1a476f8738058e0fa/charset_normalizer-3.4.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/7e/d4/7ebdbd03970677812aac39c869717059dbb71a4cfc033ca6e5221787892c/click-8.1.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/88/39/799be3f2f0f38cc727ee3b4f1445fe6d5e4133064ec2e4115069418a5bb6/cloudpickle-3.1.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4b/32/e0f13a1c5b0f8572d0ec6ae2f6c677b7991fafd95da523159c19eff0696a/contourpy-1.3.3-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/dd/71/40ee142e564b8a34a7ae9546e99e665e0001011a3254d5bbbe113d72ccba/etils-1.12.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/05/2c/ffc08c54c05cdce6fbed2aeebc46348dbe180c6d2c541c7af7ba0aa5f5f8/Farama_Notifications-0.0.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2d/8b/371ab3cec97ee3fe1126b3406b7abd60c8fec8975fd79a3c75cdea0c3d83/fonttools-4.60.1-cp313-cp313-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/44/4b/e0cfc1a6f17e990f3e64b7d941ddc4acdc7b19d6edd51abf495f32b1a9e4/fsspec-2025.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f7/ec/67fbef5d497f86283db54c22eec6f6140243aae73265799baaaa19cd17fb/ghp_import-2.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bb/55/a513de61cafe6bd70c064a5b714dc084120fe8f90a5ba51fbc5cfe42fc13/glfw-2.8.0-py2.py27.py3.py30.py31.py32.py33.py34.py35.py36.py37.py38.p39.p310.p311.p312.p313-none-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/b1/5e/38b408f41064c9fcdbb0ea27c1bd13a1c8657c4846e04dab9f5ea770602c/griffe-1.7.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/c7/53/39cd8c2f85e213fce1f32367c4bdbd3402d3bcde7d0826a1172a0f2c5cc0/gymnasium-1.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/76/c6/c88e154df9c4e1a2a66ccf0005a88dfb2650c1dffb6f5ce603dfbd452ce3/idna-3.10-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl
@@ -348,6 +351,11 @@ packages:
   - colorama ; sys_platform == 'win32'
   - importlib-metadata ; python_full_version < '3.8'
   requires_python: '>=3.7'
+- pypi: https://files.pythonhosted.org/packages/88/39/799be3f2f0f38cc727ee3b4f1445fe6d5e4133064ec2e4115069418a5bb6/cloudpickle-3.1.2-py3-none-any.whl
+  name: cloudpickle
+  version: 3.1.2
+  sha256: 9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a
+  requires_python: '>=3.8'
 - conda: https://conda.anaconda.org/conda-forge/linux-64/coal-3.0.1-h78bf25f_1.conda
   sha256: f2115304273f27845447332a3f047fef5fd7dd7fd2abf797e107cc252642c224
   md5: b0e4c7f2583554462210276ea4146532
@@ -572,6 +580,10 @@ packages:
   - etils[etree] ; extra == 'etree-tf'
   - etils[ecolab] ; extra == 'lazy-imports'
   requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/05/2c/ffc08c54c05cdce6fbed2aeebc46348dbe180c6d2c541c7af7ba0aa5f5f8/Farama_Notifications-0.0.4-py3-none-any.whl
+  name: farama-notifications
+  version: 0.0.4
+  sha256: 14de931035a41961f7c056361dc7f980762a143d05791ef5794a751a2caf05ae
 - pypi: https://files.pythonhosted.org/packages/2d/8b/371ab3cec97ee3fe1126b3406b7abd60c8fec8975fd79a3c75cdea0c3d83/fonttools-4.60.1-cp313-cp313-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl
   name: fonttools
   version: 4.60.1
@@ -773,6 +785,68 @@ packages:
   requires_dist:
   - colorama>=0.4
   requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/c7/53/39cd8c2f85e213fce1f32367c4bdbd3402d3bcde7d0826a1172a0f2c5cc0/gymnasium-1.2.2-py3-none-any.whl
+  name: gymnasium
+  version: 1.2.2
+  sha256: f04ec362b1fdf73a8b327db5ef89384a3f2ba411e05d3521513414fbbb2199c8
+  requires_dist:
+  - numpy>=1.21.0
+  - cloudpickle>=1.2.0
+  - typing-extensions>=4.3.0
+  - farama-notifications>=0.0.1
+  - ale-py>=0.9 ; extra == 'atari'
+  - box2d-py==2.3.5 ; extra == 'box2d'
+  - pygame>=2.1.3 ; extra == 'box2d'
+  - swig==4.* ; extra == 'box2d'
+  - pygame>=2.1.3 ; extra == 'classic-control'
+  - pygame>=2.1.3 ; extra == 'classic-control'
+  - mujoco>=2.1.5 ; extra == 'mujoco'
+  - imageio>=2.14.1 ; extra == 'mujoco'
+  - packaging>=23.0 ; extra == 'mujoco'
+  - pygame>=2.1.3 ; extra == 'toy-text'
+  - pygame>=2.1.3 ; extra == 'toy-text'
+  - jax>=0.4.16 ; extra == 'jax'
+  - jaxlib>=0.4.16 ; extra == 'jax'
+  - flax>=0.5.0 ; extra == 'jax'
+  - array-api-compat>=1.11.0 ; extra == 'jax'
+  - numpy>=2.1 ; extra == 'jax'
+  - torch>=1.13.0 ; extra == 'torch'
+  - array-api-compat>=1.11.0 ; extra == 'torch'
+  - numpy>=2.1 ; extra == 'torch'
+  - array-api-compat>=1.11.0 ; extra == 'array-api'
+  - numpy>=2.1 ; extra == 'array-api'
+  - packaging>=23.0 ; extra == 'array-api'
+  - moviepy>=1.0.0 ; extra == 'other'
+  - matplotlib>=3.0 ; extra == 'other'
+  - opencv-python>=3.0 ; extra == 'other'
+  - seaborn>=0.13 ; extra == 'other'
+  - ale-py>=0.9 ; extra == 'all'
+  - box2d-py==2.3.5 ; extra == 'all'
+  - pygame>=2.1.3 ; extra == 'all'
+  - swig==4.* ; extra == 'all'
+  - pygame>=2.1.3 ; extra == 'all'
+  - mujoco>=2.1.5 ; extra == 'all'
+  - imageio>=2.14.1 ; extra == 'all'
+  - packaging>=23.0 ; extra == 'all'
+  - pygame>=2.1.3 ; extra == 'all'
+  - jax>=0.4.16 ; extra == 'all'
+  - jaxlib>=0.4.16 ; extra == 'all'
+  - flax>=0.5.0 ; extra == 'all'
+  - array-api-compat>=1.11.0 ; extra == 'all'
+  - numpy>=2.1 ; extra == 'all'
+  - torch>=1.13.0 ; extra == 'all'
+  - array-api-compat>=1.11.0 ; extra == 'all'
+  - numpy>=2.1 ; extra == 'all'
+  - array-api-compat>=1.11.0 ; extra == 'all'
+  - numpy>=2.1 ; extra == 'all'
+  - opencv-python>=3.0 ; extra == 'all'
+  - matplotlib>=3.0 ; extra == 'all'
+  - moviepy>=1.0.0 ; extra == 'all'
+  - pytest>=7.1.3 ; extra == 'testing'
+  - scipy>=1.7.3 ; extra == 'testing'
+  - dill>=0.3.7 ; extra == 'testing'
+  - array-api-extra>=0.7.0 ; extra == 'testing'
+  requires_python: '>=3.10'
 - conda: https://conda.anaconda.org/conda-forge/noarch/hpp-fcl-3.0.1-pyhd3e5650_1.conda
   sha256: 324e973d25c998962ad658143e6c44e6e13e3dd20ab7b1d745c2145498dbff4a
   md5: f486a5d1042a80587295c72e73f77515
@@ -1823,7 +1897,7 @@ packages:
 - pypi: ./
   name: mujid
   version: 0.1.0
-  sha256: c803422f7d56d1d365b8cb181e77cb1ddc2782cc6147b53062fa47bdc5c53ac9
+  sha256: a7718127b28421881e019aa4acdd8ab4166523cab8cd593a748ccf4cf6ee89fc
   requires_dist:
   - loop-rate-limiters>=1.1.0
   - mujoco>=3.3.0
@@ -1831,6 +1905,7 @@ packages:
   - mkdocs-material>=9.6.11,<10
   - mkdocstrings[python]>=0.29.1,<0.30
   - matplotlib
+  - gymnasium
   requires_python: '>=3.10'
   editable: true
 - pypi: https://files.pythonhosted.org/packages/6b/be/99c648b27866539aa035726f28e1a06c16cc432883786742006ea05ad566/mujoco-3.3.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl

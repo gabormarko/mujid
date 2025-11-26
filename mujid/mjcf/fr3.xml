@@ -160,9 +160,10 @@
                       <site name="attachment_site" pos="0 0 0.107"/>
                       <body name="hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                         <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017"/>
+                        <site name="fr3_hand_tcp" pos="0 0 0.1034"/>
                         <!-- Final tuned wrist-mounted egocentric camera -->
                         <site name="wrist_camera_site" pos="0.1 0 0.04" size="0.01" rgba="0 1 0 0.6"/>
-                        <camera name="wrist_egocentric" pos="0.1 0 0.04" quat="0.299 0.641 0.641 0.299" fovy="80"/>
+                        <camera name="wrist_egocentric" pos="0.1 0 0.04" quat="0.299 0.641 0.641 0.299" fovy="30"/>
                         <!-- TCP cube: 16 mm side, fixed to the hand (no collision) -->
                         <!-- moved slightly forward and out of the palm so it's visible in the viewer -->
                         <body name="lego_2x2_hollow" pos="0 0 0.115" quat="0 1 0 0">

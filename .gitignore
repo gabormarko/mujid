@@ -3,4 +3,4 @@
 .pixi
 *.egg-info
 site/
-mujid/controllers/__pycache__
+**/__pycache__/
