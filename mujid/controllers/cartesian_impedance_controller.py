@@ -67,6 +67,9 @@ class CartesianImpedanceConfig(ControllerConfig):
 
     weights_kp_primary: np.ndarray | None = np.array([25, 25, 25, 1, 1, 1])
     weights_kd_primary: np.ndarray | None = np.array([37.5, 37.5, 37.5, 1, 1, 1])
+    clip_error_primary: np.ndarray | None = np.array(
+        [0.003, 0.003, 0.003, 0.08, 0.08, 0.08]
+    )
     weights_secondary: np.ndarray | None = None
 
     use_local_jacobian: bool = True
@@ -229,6 +232,12 @@ class CartesianImpedanceController(Controller):
         )
 
         error = pin.log(diff_pose)  # project to tangent space of SE3 # type: ignore
+        if self.conf.clip_error_primary is not None:
+            error = np.clip(
+                error,
+                -self.conf.clip_error_primary,
+                self.conf.clip_error_primary,
+            )
 
         J = pin.computeFrameJacobian(
             self._model,
