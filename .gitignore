@@ -4,3 +4,4 @@
 *.egg-info
 site/
 **/__pycache__/
+*.png

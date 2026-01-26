@@ -27,3 +27,6 @@ mujid = { path = ".", editable = true }
 tsid = ">=1.8.0,<2"
 pinocchio = ">=3.4.0,<4"
 pybind11-stubgen = "*"
+
+[tool.setuptools]
+packages = ["mujid"]

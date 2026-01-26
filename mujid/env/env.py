@@ -4,12 +4,15 @@ import mujoco.viewer
 import numpy as np
 import pinocchio as pin
 
-from mujid.controllers.util import make_controller
+from mujid.controllers.cartesian_impedance_controller import (
+    CartesianImpedanceConfig,
+    CartesianImpedanceController,
+)
 
 
 class MujidEnv(gymnasium.Env):
-    path_mjf = "/home/linus/uni/master/code/mujid/mujid/mjcf/scene_no_mocap.xml"
-    path_urdf = "/home/linus/uni/master/code/mujid/mujid/urdf/fr3_franka_hand.urdf"
+    path_mjf = "/home/linusschwarz/repos/mujid/mujid/mjcf/scene_no_mocap.xml"
+    path_urdf = "/home/linusschwarz/repos/mujid/mujid/urdf/fr3_franka_hand.urdf"
 
     ctrl_type = "cartesian_impedance"  # "tsid", "cartesian_impedance", "gravity_compensation", "inverse_dynamics"
 
@@ -33,10 +36,11 @@ class MujidEnv(gymnasium.Env):
         frequency_simulation // frequency_controller
     )
     # viz_update_rate = 50  # Update viewer every N simulation steps
-    camera_id = 0
+    camera_1_id = 0
+    camera_2_id = 1
     CAM_HEIGHT = 256
     CAM_WIDTH = 256
-    cameras = ["wrist_cam"]
+    cameras = ["wrist_cam_1", "wrist_cam_2"]
     n_init = 0
 
     def __init__(self, config):
@@ -48,13 +52,7 @@ class MujidEnv(gymnasium.Env):
 
         self.config = config
 
-        # Configurable lego randomization range (x-axis). Provide as (low, high).
-        # Example: config['lego_shift_range'] = (-0.01, 0.01)
-        self.lego_shift_range = config.get("lego_shift_range", (-0.002, 0.002))
-        self.initial_position_range = config.get(
-            "initial_position_range",
-            (np.array([-0.0, -0.0, -0.0]), np.array([0.0, 0.0, 0.0])),
-        )
+        self.n_rendered_cameras = config.get("n_cameras", 0)
 
         # Initialize MuJoCo simulation
         self.spec_ = mujoco.MjSpec.from_file(str(self.path_mjf))
@@ -73,8 +71,8 @@ class MujidEnv(gymnasium.Env):
         for i in range(7):
             joint_id = self.model.joint(f"fr3_joint{i + 1}").id
             self.model.dof_damping[joint_id] = (
-                self.viscous_friction  # Viscous friction coefficient
-            )
+                self.viscous_friction
+            )  # Viscous friction coefficient
             self.model.dof_frictionloss[joint_id] = (
                 self.dry_friction
             )  # Dry/Coulomb friction
@@ -89,11 +87,17 @@ class MujidEnv(gymnasium.Env):
 
         # initialize the renderer
         self.renderer = mujoco.Renderer(self.model, self.CAM_HEIGHT, self.CAM_WIDTH)
-        self.cam_buffer = np.zeros((self.CAM_HEIGHT, self.CAM_WIDTH, 3), dtype=np.uint8)
+        self.cam_buffer_1 = np.zeros(
+            (self.CAM_HEIGHT, self.CAM_WIDTH, 3), dtype=np.uint8
+        )
+        self.cam_buffer_2 = np.zeros(
+            (self.CAM_HEIGHT, self.CAM_WIDTH, 3), dtype=np.uint8
+        )
 
         # Initialize controller
-        self.ctrl, self.conf = make_controller(
-            self.ctrl_type, str(self.path_urdf), self.sim_dt
+        self.conf = CartesianImpedanceConfig()
+        self.ctrl = CartesianImpedanceController(
+            conf=self.conf, path_to_urdf=str(self.path_urdf)
         )
 
         if config.get("live_view", False):
@@ -136,15 +140,22 @@ class MujidEnv(gymnasium.Env):
         # Optionally apply a small random x-shift to the lego body before
         # resetting the simulation state so the change is reflected in the
         # initial data.
-        lego_shift_low, lego_shift_high = self.lego_shift_range
-        lego_dx = float(np.random.uniform(lego_shift_low, lego_shift_high))
+        if options is None:
+            print("No reset options provided, using default positions.")
+            grasp_position = np.array([0.0, 0.0, 0.0])
+            start_position = np.array([0.0, 0.0, 0.0])
+        else:
+            grasp_position = options["grasp_position"]
+            start_position = options["start_position"]
         # Apply shift in model-relative coordinates (x axis)
         self.model.body_pos[self._gripped_lego_body_id, 0] = (
-            self._gripped_lego_body_pos0[0] + lego_dx
+            self._gripped_lego_body_pos0[0] - grasp_position[0]
+        )
+        self.model.body_pos[self._gripped_lego_body_id, 2] = (
+            self._gripped_lego_body_pos0[2] - grasp_position[2]
         )
 
-        initial_dxyz_low, initial_dxyz_high = self.initial_position_range
-        initial_dxyz = np.random.uniform(initial_dxyz_low, initial_dxyz_high)
+        initial_dxy = start_position[:2] - np.array([0.6, 0.0])
 
         # Reset to initial state (home)
         mujoco.mj_resetDataKeyframe(
@@ -167,9 +178,9 @@ class MujidEnv(gymnasium.Env):
         self.step(
             np.array(
                 [
-                    initial_dxyz[0] - lego_dx,
-                    initial_dxyz[1],
-                    initial_dxyz[2],
+                    initial_dxy[0],
+                    initial_dxy[1],
+                    0.0,
                     1,
                     0,
                     0,
@@ -181,7 +192,7 @@ class MujidEnv(gymnasium.Env):
             self.step(np.array([0.0, 0, 0, 1, 0, 0, 0]))
 
         return self._get_obs(), {
-            "reset.grasped.position": np.array([-lego_dx, 0.0, 0.0])
+            "reset.grasped.position": np.array(-grasp_position),
         }
 
     def render(self, mode="human"):
@@ -195,12 +206,12 @@ class MujidEnv(gymnasium.Env):
         pass
 
     def _get_obs(self):
-        return {
-            "observation.images.wrist_camera": self._render(),
+        imgs = self._render()
+        obs = {
             "observation.state.target": np.concatenate(
                 [
-                    self.target_pose.translation,
-                    quaternion_from_rotation_matrix(self.target_pose.rotation),
+                    self.target_pose.translation,  # pyright: ignore[reportArgumentType]
+                    quaternion_from_rotation_matrix(self.target_pose.rotation),  # pyright: ignore[reportArgumentType]
                 ]
             ),  # type: ignore
             "observation.state.joint_positions": self.data.qpos.copy(),
@@ -209,12 +220,24 @@ class MujidEnv(gymnasium.Env):
             "observation.state.cartesian": self.data.site("fr3_hand_tcp").xpos,
             "observation.state.moving_brick": self.data.geom("wall_top").xpos,
         }
+        for i, img in enumerate(imgs):
+            obs[f"observation.images.wrist_camera_{i + 1}"] = img
+
+        return obs
 
     def _render(self):
-        self.renderer.update_scene(self.data, self.camera_id)
+        out = []
+        if self.n_rendered_cameras >= 1:
+            self.renderer.update_scene(self.data, self.camera_1_id)
+            cam_1 = self.renderer.render(out=self.cam_buffer_1)
+            out.append(cam_1)
+        if self.n_rendered_cameras >= 2:
+            self.renderer.update_scene(self.data, self.camera_2_id)
+            cam_2 = self.renderer.render(out=self.cam_buffer_2)
+            out.append(cam_2)
         if self.viewer is not None:
             self.viewer.sync()
-        return self.renderer.render(out=self.cam_buffer)
+        return out
 
 
 def quaternion_from_rotation_matrix(mat: np.ndarray) -> np.ndarray:

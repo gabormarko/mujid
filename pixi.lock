@@ -1897,7 +1897,7 @@ packages:
 - pypi: ./
   name: mujid
   version: 0.1.0
-  sha256: a7718127b28421881e019aa4acdd8ab4166523cab8cd593a748ccf4cf6ee89fc
+  sha256: f0e8323c9e45ce24182035d87aeabea386a7362bda117241e30f7ff020474775
   requires_dist:
   - loop-rate-limiters>=1.1.0
   - mujoco>=3.3.0
