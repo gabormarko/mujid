@@ -160,6 +160,7 @@
                       <site name="attachment_site" pos="0 0 0.107"/>
                       <body name="hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                         <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017"/>
+                        <site name="fr3_hand_base" pos="0 0 0"/>
                         <site name="fr3_hand_tcp" pos="0 0 0.1034"/>
                         <!-- Final tuned wrist-mounted egocentric camera -->
                         <site name="wrist_camera_1_site" pos="0.1 0 0.04" size="0.01" rgba="0 1 0 0.6"/>
@@ -308,4 +309,8 @@
     <motor name="fr3_joint7_motor" gear="1" joint="fr3_joint7" ctrlrange="-100 100"/>
   </actuator>
 
+<sensor>
+    <force name="force_sensor" site="fr3_hand_base"/>
+    <torque name="torque_sensor" site="fr3_hand_base"/>
+</sensor>
 </mujoco>

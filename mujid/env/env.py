@@ -32,9 +32,7 @@ class MujidEnv(gymnasium.Env):
     frequency_simulation = 3000
     sim_dt = 1.0 / frequency_simulation
     n_controller_steps_per_rl_step = frequency_controller // frequency_rl
-    n_simulation_steps_per_controller_step = (
-        frequency_simulation // frequency_controller
-    )
+    n_simulation_steps_per_controller_step = frequency_simulation // frequency_controller
     # viz_update_rate = 50  # Update viewer every N simulation steps
     camera_1_id = 0
     camera_2_id = 1
@@ -63,19 +61,13 @@ class MujidEnv(gymnasium.Env):
         # apply small shifts at reset.
         self._gripped_lego_body_id = self.model.body("lego_2x2_hollow").id
         # Copy original model-relative body position (x,y,z)
-        self._gripped_lego_body_pos0 = self.model.body_pos[
-            self._gripped_lego_body_id
-        ].copy()
+        self._gripped_lego_body_pos0 = self.model.body_pos[self._gripped_lego_body_id].copy()
 
         # Set friction values for all robot joints
         for i in range(7):
             joint_id = self.model.joint(f"fr3_joint{i + 1}").id
-            self.model.dof_damping[joint_id] = (
-                self.viscous_friction
-            )  # Viscous friction coefficient
-            self.model.dof_frictionloss[joint_id] = (
-                self.dry_friction
-            )  # Dry/Coulomb friction
+            self.model.dof_damping[joint_id] = self.viscous_friction  # Viscous friction coefficient
+            self.model.dof_frictionloss[joint_id] = self.dry_friction  # Dry/Coulomb friction
 
         self.data = mujoco.MjData(self.model)
         mujoco.mj_resetDataKeyframe(
@@ -87,23 +79,15 @@ class MujidEnv(gymnasium.Env):
 
         # initialize the renderer
         self.renderer = mujoco.Renderer(self.model, self.CAM_HEIGHT, self.CAM_WIDTH)
-        self.cam_buffer_1 = np.zeros(
-            (self.CAM_HEIGHT, self.CAM_WIDTH, 3), dtype=np.uint8
-        )
-        self.cam_buffer_2 = np.zeros(
-            (self.CAM_HEIGHT, self.CAM_WIDTH, 3), dtype=np.uint8
-        )
+        self.cam_buffer_1 = np.zeros((self.CAM_HEIGHT, self.CAM_WIDTH, 3), dtype=np.uint8)
+        self.cam_buffer_2 = np.zeros((self.CAM_HEIGHT, self.CAM_WIDTH, 3), dtype=np.uint8)
 
         # Initialize controller
         self.conf = CartesianImpedanceConfig()
-        self.ctrl = CartesianImpedanceController(
-            conf=self.conf, path_to_urdf=str(self.path_urdf)
-        )
+        self.ctrl = CartesianImpedanceController(conf=self.conf, path_to_urdf=str(self.path_urdf))
 
         if config.get("live_view", False):
-            self.viewer = mujoco.viewer.launch_passive(
-                self.model, self.data, show_left_ui=False, show_right_ui=False
-            )
+            self.viewer = mujoco.viewer.launch_passive(self.model, self.data, show_left_ui=False, show_right_ui=False)
         else:
             self.viewer = None
 
@@ -111,6 +95,13 @@ class MujidEnv(gymnasium.Env):
             pin.Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),  # type: ignore
             np.zeros(3),
         )
+
+        force_id = self.model.sensor("force_sensor").id
+        torque_id = self.model.sensor("torque_sensor").id
+
+        self.force_adr = self.model.sensor_adr[force_id]
+
+        self.torque_adr = self.model.sensor_adr[torque_id]
 
     def step(self, action: np.ndarray, block=False):
         # Set the target pose
@@ -124,15 +115,11 @@ class MujidEnv(gymnasium.Env):
             ).matrix(),  # type: ignore
             self.target_pose.translation + action[:3],
         )
-        self.ctrl.set_target(
-            self.target_pose, target_q=self.conf.q0, target_dq=np.zeros(7)
-        )
+        self.ctrl.set_target(self.target_pose, target_q=self.conf.q0, target_dq=np.zeros(7))
 
         for _ in range(self.n_controller_steps_per_rl_step):
             self.data.ctrl = self.ctrl.update(0.0, self.data.qpos, self.data.qvel)
-            mujoco.mj_step(
-                self.model, self.data, nstep=self.n_simulation_steps_per_controller_step
-            )
+            mujoco.mj_step(self.model, self.data, nstep=self.n_simulation_steps_per_controller_step)
 
         return self._get_obs(), 0.0, False, False, {}
 
@@ -148,12 +135,8 @@ class MujidEnv(gymnasium.Env):
             grasp_position = options["grasp_position"]
             start_position = options["start_position"]
         # Apply shift in model-relative coordinates (x axis)
-        self.model.body_pos[self._gripped_lego_body_id, 0] = (
-            self._gripped_lego_body_pos0[0] - grasp_position[0]
-        )
-        self.model.body_pos[self._gripped_lego_body_id, 2] = (
-            self._gripped_lego_body_pos0[2] - grasp_position[2]
-        )
+        self.model.body_pos[self._gripped_lego_body_id, 0] = self._gripped_lego_body_pos0[0] - grasp_position[0]
+        self.model.body_pos[self._gripped_lego_body_id, 2] = self._gripped_lego_body_pos0[2] - grasp_position[2]
 
         initial_dxy = start_position[:2] - np.array([0.6, 0.0])
 
@@ -161,11 +144,7 @@ class MujidEnv(gymnasium.Env):
         mujoco.mj_resetDataKeyframe(
             self.model,
             self.data,
-            key=(
-                self.config["initial_keyframe"]
-                if "initial_keyframe" in self.config
-                else 1
-            ),
+            key=(self.config["initial_keyframe"] if "initial_keyframe" in self.config else 1),
         )
         mujoco.mj_forward(self.model, self.data)
 
@@ -180,7 +159,7 @@ class MujidEnv(gymnasium.Env):
                 [
                     initial_dxy[0],
                     initial_dxy[1],
-                    0.0,
+                    -0.003,
                     1,
                     0,
                     0,
@@ -207,6 +186,8 @@ class MujidEnv(gymnasium.Env):
 
     def _get_obs(self):
         imgs = self._render()
+        ee_force = self.data.sensordata[self.force_adr : self.force_adr + 3]
+        ee_torque = self.data.sensordata[self.torque_adr : self.torque_adr + 3]
         obs = {
             "observation.state.target": np.concatenate(
                 [
@@ -219,6 +200,7 @@ class MujidEnv(gymnasium.Env):
             "observation.state.joint_torques": self.data.ctrl.copy(),
             "observation.state.cartesian": self.data.site("fr3_hand_tcp").xpos,
             "observation.state.moving_brick": self.data.geom("wall_top").xpos,
+            "observation.state.sensors_bota_ft_sensor": np.concatenate([ee_force, ee_torque]),
         }
         for i, img in enumerate(imgs):
             obs[f"observation.images.wrist_camera_{i + 1}"] = img
